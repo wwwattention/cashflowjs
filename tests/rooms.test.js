@@ -5,6 +5,7 @@ const {
   createRoomStore,
   createRoom,
   joinRoom,
+  rejoinRoom,
   setReady,
   startRoomGame,
 } = require('../src/server/rooms');
@@ -45,4 +46,26 @@ test('ready and start are host-gated', () => {
   assert.throws(() => startRoomGame(store, room.id, guest.id), /Только хост/);
   const started = startRoomGame(store, room.id, players[0].id);
   assert.equal(started.room.status, 'playing');
+});
+
+test('existing session can rejoin after game started but new players cannot', () => {
+  const store = createRoomStore();
+  const { room, players } = createRoom(store, { hostName: 'Host', sessionId: 'host_session', settings: { maxPlayers: 2 } });
+  const guest = joinRoom(store, room.inviteCode, { name: 'Guest', sessionId: 'guest_session' }).player;
+
+  setReady(store, room.id, guest.id, true);
+  startRoomGame(store, room.id, players[0].id);
+
+  const rejoined = rejoinRoom(store, room.inviteCode, { sessionId: 'guest_session' });
+  assert.equal(rejoined.player.id, guest.id);
+
+  assert.throws(
+    () => rejoinRoom(store, room.inviteCode, { sessionId: 'missing_session' }),
+    /Сессия игрока не найдена/
+  );
+
+  assert.throws(
+    () => joinRoom(store, room.inviteCode, { name: 'Late', sessionId: 'late_session' }),
+    /Игра уже началась/
+  );
 });

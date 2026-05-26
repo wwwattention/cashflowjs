@@ -2,3 +2,5 @@
 docs/change log
 
 node_modules
+data/*.json
+data/*.tmp

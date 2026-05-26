@@ -303,3 +303,29 @@ h2 {
   .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .layout-2 { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 }
+
+.board-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.board-pill {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.board-pill.active {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.34), rgba(255, 209, 102, 0.22));
+  border-color: rgba(78, 205, 196, 0.72);
+  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.18);
+}
+
+.player-row small {
+  grid-column: 2 / -1;
+  color: var(--muted);
+}

@@ -4,13 +4,19 @@ const {
   createRoom,
   getRoom,
   joinRoom,
+  rejoinRoom,
   setReady,
   startRoomGame,
   markDisconnected,
+  findRoomByInvite,
 } = require('./rooms');
 
 function emitLobby(io, roomSnapshot) {
   io.to(roomSnapshot.room.id).emit('lobbyUpdated', roomSnapshot);
+}
+
+function persist(store) {
+  if (typeof store.persist === 'function') store.persist();
 }
 
 function installSockets(httpServer, store) {
@@ -25,6 +31,7 @@ function installSockets(httpServer, store) {
         socket.join(snapshot.room.id);
         socket.data.roomId = snapshot.room.id;
         socket.data.playerId = snapshot.players[0].id;
+        persist(store);
         reply({ ok: true, ...snapshot, player: snapshot.players[0] });
         emitLobby(io, snapshot);
       } catch (error) {
@@ -38,7 +45,26 @@ function installSockets(httpServer, store) {
         socket.join(snapshot.room.id);
         socket.data.roomId = snapshot.room.id;
         socket.data.playerId = snapshot.player.id;
-        reply({ ok: true, ...snapshot });
+        persist(store);
+        const gameState = store.gameStates.get(snapshot.room.id) || null;
+        reply({ ok: true, ...snapshot, gameState });
+        if (gameState) socket.emit('gameStarted', gameState);
+        emitLobby(io, snapshot);
+      } catch (error) {
+        reply({ ok: false, error: error.message });
+      }
+    });
+
+    socket.on('room:rejoin', (payload = {}, reply = () => {}) => {
+      try {
+        const snapshot = rejoinRoom(store, payload.inviteCode, payload);
+        socket.join(snapshot.room.id);
+        socket.data.roomId = snapshot.room.id;
+        socket.data.playerId = snapshot.player.id;
+        persist(store);
+        const gameState = store.gameStates.get(snapshot.room.id) || null;
+        reply({ ok: true, ...snapshot, gameState });
+        if (gameState) socket.emit('gameStarted', gameState);
         emitLobby(io, snapshot);
       } catch (error) {
         reply({ ok: false, error: error.message });
@@ -48,6 +74,7 @@ function installSockets(httpServer, store) {
     socket.on('room:ready', (payload = {}, reply = () => {}) => {
       try {
         const snapshot = setReady(store, payload.roomId, payload.playerId || socket.data.playerId, payload.ready);
+        persist(store);
         reply({ ok: true, ...snapshot });
         emitLobby(io, snapshot);
       } catch (error) {
@@ -60,6 +87,7 @@ function installSockets(httpServer, store) {
         const snapshot = startRoomGame(store, payload.roomId, payload.playerId || socket.data.playerId);
         const state = createInitialGameState({ ...snapshot.room, players: snapshot.players });
         store.gameStates.set(snapshot.room.id, state);
+        persist(store);
         reply({ ok: true, gameState: state });
         io.to(snapshot.room.id).emit('gameStarted', state);
       } catch (error) {
@@ -80,6 +108,7 @@ function installSockets(httpServer, store) {
           clientTime: payload.clientTime,
         });
         store.gameStates.set(payload.roomId, next);
+        persist(store);
         reply({ ok: true, gameState: next });
         io.to(payload.roomId).emit('gameStateUpdated', next);
       } catch (error) {
@@ -91,7 +120,10 @@ function installSockets(httpServer, store) {
     socket.on('disconnect', () => {
       if (!socket.data.roomId || !socket.data.playerId) return;
       const snapshot = markDisconnected(store, socket.data.roomId, socket.data.playerId);
-      if (snapshot) emitLobby(io, snapshot);
+      if (snapshot) {
+        persist(store);
+        emitLobby(io, snapshot);
+      }
     });
   });
 
@@ -102,22 +134,37 @@ function restHandlers(store) {
   return {
     createRoom(req, res) {
       try {
-        res.json({ ok: true, ...createRoom(store, req.body || {}) });
+        const result = createRoom(store, req.body || {});
+        persist(store);
+        res.json({ ok: true, ...result });
       } catch (error) {
         res.status(400).json({ ok: false, error: error.message });
       }
     },
     getRoom(req, res) {
       try {
-        const snapshot = getRoom(store, req.params.roomId);
-        res.json({ ok: true, ...snapshot, gameState: store.gameStates.get(req.params.roomId) || null });
+        const byInvite = findRoomByInvite(store, req.params.roomId);
+        const roomId = byInvite ? byInvite.id : req.params.roomId;
+        const snapshot = byInvite ? { room: byInvite, players: byInvite.players.map((player) => ({ ...player })) } : getRoom(store, roomId);
+        res.json({ ok: true, ...snapshot, gameState: store.gameStates.get(roomId) || null });
       } catch (error) {
         res.status(404).json({ ok: false, error: error.message });
       }
     },
     joinRoom(req, res) {
       try {
-        res.json({ ok: true, ...joinRoom(store, req.params.roomId, req.body || {}) });
+        const result = joinRoom(store, req.params.roomId, req.body || {});
+        persist(store);
+        res.json({ ok: true, ...result });
+      } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+      }
+    },
+    rejoinRoom(req, res) {
+      try {
+        const result = rejoinRoom(store, req.params.roomId, req.body || {});
+        persist(store);
+        res.json({ ok: true, ...result, gameState: store.gameStates.get(result.room.id) || null });
       } catch (error) {
         res.status(400).json({ ok: false, error: error.message });
       }

@@ -115,9 +115,6 @@ function getRoom(store, roomId) {
 function joinRoom(store, invite, input = {}) {
   const room = findRoomByInvite(store, invite);
   if (!room) throw new Error('Комната не найдена.');
-  if (room.status !== 'lobby') throw new Error('Игра уже началась.');
-  if (room.players.length >= room.maxPlayers) throw new Error('Комната заполнена.');
-
   const sessionId = input.sessionId || id('session');
   const existing = room.players.find((player) => player.sessionId === sessionId);
   if (existing) {
@@ -125,6 +122,9 @@ function joinRoom(store, invite, input = {}) {
     room.updatedAt = new Date().toISOString();
     return { ...snapshot(room), player: { ...existing } };
   }
+
+  if (room.status !== 'lobby') throw new Error('Игра уже началась.');
+  if (room.players.length >= room.maxPlayers) throw new Error('Комната заполнена.');
 
   const usedColors = new Set(room.players.map((player) => player.color));
   const player = {
@@ -145,6 +145,16 @@ function joinRoom(store, invite, input = {}) {
   room.players.push(player);
   room.updatedAt = new Date().toISOString();
   return { ...snapshot(room), player: { ...player } };
+}
+
+function rejoinRoom(store, invite, input = {}) {
+  const room = findRoomByInvite(store, invite);
+  if (!room) throw new Error('Комната не найдена.');
+  const existing = room.players.find((player) => player.sessionId === input.sessionId);
+  if (!existing) throw new Error('Сессия игрока не найдена.');
+  existing.isConnected = true;
+  room.updatedAt = new Date().toISOString();
+  return { ...snapshot(room), player: { ...existing } };
 }
 
 function setReady(store, roomId, playerId, ready) {
@@ -183,9 +193,11 @@ module.exports = {
   createRoom,
   getRoom,
   joinRoom,
+  rejoinRoom,
   setReady,
   startRoomGame,
   markDisconnected,
   snapshot,
   COLORS,
+  findRoomByInvite,
 };
