@@ -8,6 +8,7 @@ const {
   rejoinRoom,
   setReady,
   startRoomGame,
+  closeRoom,
 } = require('../src/server/rooms');
 
 test('createRoom creates a lobby room with host and invite code', () => {
@@ -68,4 +69,17 @@ test('existing session can rejoin after game started but new players cannot', ()
     () => joinRoom(store, room.inviteCode, { name: 'Late', sessionId: 'late_session' }),
     /Игра уже началась/
   );
+});
+
+
+test('host can close room and non-host cannot', () => {
+  const store = createRoomStore();
+  const { room, players } = createRoom(store, { hostName: 'Host', settings: { maxPlayers: 2 } });
+  const guest = joinRoom(store, room.inviteCode, { name: 'Guest' }).player;
+
+  assert.throws(() => closeRoom(store, room.id, guest.id), /Только хост/);
+  const closed = closeRoom(store, room.id, players[0].id);
+
+  assert.equal(closed.room.status, 'closed');
+  assert.throws(() => joinRoom(store, room.inviteCode, { name: 'Late' }), /Комната закрыта/);
 });

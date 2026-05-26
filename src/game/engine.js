@@ -1,3 +1,14 @@
+const {
+  SMALL_DEALS,
+  BIG_DEALS,
+  MARKET_CARDS,
+  DOODADS,
+  DREAMS,
+  professionToFinancials,
+  pickCard,
+  pickProfession,
+} = require('./data');
+
 const BOARD = Object.freeze([
   'PAYCHECK',
   'OPPORTUNITY',
@@ -23,81 +34,61 @@ const CELL_LABELS = Object.freeze({
   DOWNSIZE: 'Увольнение',
 });
 
-const DEALS = Object.freeze({
-  small: {
-    id: 'small_real_estate_starter',
-    type: 'small',
-    title: 'Малая сделка: парковочное место',
-    cost: 200,
-    cashflow: 20,
-    description: 'Небольшой актив для первого онлайн-MVP. Сервер проверяет покупку и деньги.',
-  },
-  big: {
-    id: 'big_real_estate_starter',
-    type: 'big',
-    title: 'Крупная сделка: квартира под аренду',
-    cost: 5000,
-    cashflow: 450,
-    description: 'Крупный актив. Если денег не хватает — сначала возьмите кредит.',
-  },
-});
-
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
 function createInitialFinancials(players) {
   return players.reduce((acc, player) => {
-    acc[player.id] = {
-      cash: 400,
-      salary: 3000,
-      passiveIncome: 0,
-      totalIncome: 3000,
-      totalExpenses: 2000,
-      payday: 1000,
-      assets: [],
-      liabilities: [],
-      children: 0,
-      loans: 0,
-    };
+    acc[player.id] = professionToFinancials(player.profession);
     return acc;
   }, {});
 }
 
 function createInitialGameState(room) {
-  const players = room.players.map((player, index) => ({
-    id: player.id,
-    name: player.name,
-    color: player.color,
-    isHost: Boolean(player.isHost),
-    isConnected: player.isConnected !== false,
-    isReady: Boolean(player.isReady),
-    position: 0,
-    track: 'ratRace',
-    turnOrder: index,
-    skipTurns: 0,
-    charityTurns: 0,
-  }));
+  const players = room.players.map((player, index) => {
+    const profession = pickProfession(index);
+    return {
+      id: player.id,
+      name: player.name,
+      color: player.color,
+      isHost: Boolean(player.isHost),
+      isConnected: player.isConnected !== false,
+      isReady: Boolean(player.isReady),
+      position: 0,
+      track: 'ratRace',
+      turnOrder: index,
+      skipTurns: 0,
+      charityTurns: 0,
+      professionId: profession.id,
+      professionTitle: profession.title,
+      dream: clone(DREAMS[index % DREAMS.length]),
+      hasEscapedRatRace: false,
+      profession,
+    };
+  });
+
+  const cleanPlayers = players.map(({ profession, ...player }) => player);
 
   return {
     roomId: room.id,
     status: 'playing',
     turnNumber: 1,
-    currentPlayerId: players[0] ? players[0].id : undefined,
+    currentPlayerId: cleanPlayers[0] ? cleanPlayers[0].id : undefined,
     phase: 'waitingForRoll',
     dice: undefined,
-    players,
+    players: cleanPlayers,
     board: BOARD.map((type, index) => ({ id: index, type, label: CELL_LABELS[type] || type })),
     financials: createInitialFinancials(players),
     actionLog: [
       {
         id: 'log_start',
         turnNumber: 1,
-        message: 'Игра началась. Первый игрок бросает кубик.',
+        message: 'Игра началась. Игроки получили профессии, мечты и стартовые финансы.',
         createdAt: new Date().toISOString(),
       },
     ],
-    pendingAction: { type: 'ROLL_DICE', playerId: players[0] && players[0].id },
+    pendingAction: { type: 'ROLL_DICE', playerId: cleanPlayers[0] && cleanPlayers[0].id },
   };
 }
 
@@ -124,16 +115,42 @@ function appendLog(state, message) {
   });
 }
 
+function recalculateFinancials(financials) {
+  financials.totalIncome = financials.salary + financials.passiveIncome;
+  financials.monthlyLoanPayment = Math.ceil((financials.loans || 0) * 0.1);
+  const fixedExpenses = financials.taxes
+    + (financials.liabilities || [])
+      .filter((item) => item.id !== 'bank_loan')
+      .reduce((sum, item) => sum + (item.payment || 0), 0)
+    + financials.monthlyLoanPayment;
+  const childExpenses = (financials.children || 0) * 480;
+  financials.totalExpenses = fixedExpenses + childExpenses;
+  financials.payday = financials.totalIncome - financials.totalExpenses;
+  return financials;
+}
+
+function checkRatRaceEscape(state, player) {
+  const financials = currentFinancials(state, player.id);
+  recalculateFinancials(financials);
+  if (!player.hasEscapedRatRace && financials.passiveIncome >= financials.totalExpenses) {
+    player.track = 'fastTrack';
+    player.hasEscapedRatRace = true;
+    appendLog(state, `${player.name} вышел из крысиных бегов: passive income покрывает расходы.`);
+  }
+}
+
 function setEndTurn(state, player) {
+  checkRatRaceEscape(state, player);
   state.phase = 'endTurn';
   state.pendingAction = { type: 'END_TURN', playerId: player.id };
 }
 
-function resolveCell(state, player) {
+function resolveCell(state, player, options = {}) {
   const cell = state.board[player.position];
   const financials = currentFinancials(state, player.id);
 
   if (cell.type === 'PAYCHECK') {
+    recalculateFinancials(financials);
     financials.cash += financials.payday;
     appendLog(state, `${player.name} получил зарплату $${financials.payday}.`);
     setEndTurn(state, player);
@@ -144,6 +161,22 @@ function resolveCell(state, player) {
     state.phase = 'choosingDealType';
     state.pendingAction = { type: 'CHOOSE_DEAL_TYPE', playerId: player.id, options: ['small', 'big'] };
     appendLog(state, `${player.name} выбирает малую или крупную сделку.`);
+    return state;
+  }
+
+  if (cell.type === 'OFFER') {
+    const card = pickCard(MARKET_CARDS, options.rng ? options.rng() : Math.random());
+    state.phase = 'resolvingCell';
+    state.pendingAction = { type: 'MARKET_OFFER', playerId: player.id, card };
+    appendLog(state, `${player.name} получил рыночное предложение: ${card.title}.`);
+    return state;
+  }
+
+  if (cell.type === 'LIABILITY') {
+    const card = pickCard(DOODADS, options.rng ? options.rng() : Math.random());
+    state.phase = 'resolvingCell';
+    state.pendingAction = { type: 'PAY_DOODAD', playerId: player.id, card };
+    appendLog(state, `${player.name} получил расход: ${card.title} ($${card.cost}).`);
     return state;
   }
 
@@ -160,8 +193,7 @@ function resolveCell(state, player) {
 
   if (cell.type === 'CHILD') {
     financials.children += 1;
-    financials.totalExpenses += 480;
-    financials.payday = financials.totalIncome + financials.passiveIncome - financials.totalExpenses;
+    recalculateFinancials(financials);
     appendLog(state, `${player.name}: появился ребёнок. Расходы выросли на $480.`);
     setEndTurn(state, player);
     return state;
@@ -192,13 +224,19 @@ function rollDice(state, action, options) {
   state.dice = dice;
   const cell = state.board[player.position];
   appendLog(state, `${player.name} бросил ${dice} и попал на ${cell.label}.`);
-  return resolveCell(state, player);
+  return resolveCell(state, player, options);
 }
 
 function endTurn(state, action) {
   requireCurrentPlayer(state, action);
-  if (state.phase !== 'endTurn') throw new Error('Сначала завершите текущее действие.');
-  const currentIndex = state.players.findIndex((player) => player.id === action.playerId);
+  const player = currentPlayer(state);
+  if (state.phase !== 'endTurn') {
+    checkRatRaceEscape(state, player);
+    if (player.hasEscapedRatRace) return state;
+    throw new Error('Сначала завершите текущее действие.');
+  }
+  checkRatRaceEscape(state, player);
+  const currentIndex = state.players.findIndex((candidate) => candidate.id === action.playerId);
   const next = state.players[(currentIndex + 1) % state.players.length];
   state.currentPlayerId = next.id;
   state.turnNumber += 1;
@@ -209,15 +247,17 @@ function endTurn(state, action) {
   return state;
 }
 
-function chooseDealType(state, action) {
+function chooseDealType(state, action, options = {}) {
   requireCurrentPlayer(state, action);
   if (state.phase !== 'choosingDealType') throw new Error('Сейчас нельзя выбирать сделку.');
   const dealType = action.payload && action.payload.dealType;
-  const deal = DEALS[dealType];
-  if (!deal) throw new Error('Недоступный тип сделки.');
+  const deck = dealType === 'small' ? SMALL_DEALS : dealType === 'big' ? BIG_DEALS : null;
+  if (!deck) throw new Error('Недоступный тип сделки.');
+  const deal = pickCard(deck, options.rng ? options.rng() : Math.random());
+  deal.deck = dealType;
   state.phase = 'reviewingDeal';
-  state.pendingAction = { type: 'BUY_ASSET', playerId: action.playerId, deal: clone(deal) };
-  appendLog(state, `${currentPlayer(state).name} выбрал ${dealType === 'small' ? 'малую' : 'крупную'} сделку.`);
+  state.pendingAction = { type: 'BUY_ASSET', playerId: action.playerId, deal };
+  appendLog(state, `${currentPlayer(state).name} выбрал ${dealType === 'small' ? 'малую' : 'крупную'} сделку: ${deal.title}.`);
   return state;
 }
 
@@ -228,12 +268,20 @@ function buyAsset(state, action) {
   }
   const deal = state.pendingAction.deal;
   const financials = currentFinancials(state, action.playerId);
-  if (financials.cash < deal.cost) throw new Error('Недостаточно средств.');
-  financials.cash -= deal.cost;
-  financials.passiveIncome += deal.cashflow;
-  financials.payday = financials.totalIncome + financials.passiveIncome - financials.totalExpenses;
-  financials.assets.push({ ...deal, acquiredAtTurn: state.turnNumber });
-  appendLog(state, `${currentPlayer(state).name} купил актив «${deal.title}» за $${deal.cost}.`);
+  const cost = deal.downPayment || deal.cost;
+  if (financials.cash < cost) throw new Error('Недостаточно средств.');
+  financials.cash -= cost;
+  financials.passiveIncome += deal.cashflow || 0;
+  recalculateFinancials(financials);
+  const asset = {
+    ...deal,
+    assetId: `asset_${state.turnNumber}_${financials.assets.length + 1}`,
+    costBasis: cost,
+    shares: deal.quantityLabel === 'shares' ? Math.max(1, Math.floor(cost / (deal.unitPrice || cost))) : undefined,
+    acquiredAtTurn: state.turnNumber,
+  };
+  financials.assets.push(asset);
+  appendLog(state, `${currentPlayer(state).name} купил актив «${deal.title}» за $${cost}.`);
   setEndTurn(state, currentPlayer(state));
   return state;
 }
@@ -249,6 +297,46 @@ function acceptCharity(state, action) {
   financials.cash -= amount;
   currentPlayer(state).charityTurns = 3;
   appendLog(state, `${currentPlayer(state).name} пожертвовал $${amount}.`);
+  setEndTurn(state, currentPlayer(state));
+  return state;
+}
+
+function payDoodad(state, action) {
+  requireCurrentPlayer(state, action);
+  if (!state.pendingAction || state.pendingAction.type !== 'PAY_DOODAD') throw new Error('Расход сейчас недоступен.');
+  const card = state.pendingAction.card;
+  const financials = currentFinancials(state, action.playerId);
+  if (financials.cash < card.cost) throw new Error('Недостаточно средств.');
+  financials.cash -= card.cost;
+  appendLog(state, `${currentPlayer(state).name} оплатил расход «${card.title}» на $${card.cost}.`);
+  setEndTurn(state, currentPlayer(state));
+  return state;
+}
+
+function assetMatchesMarket(asset, card) {
+  if (card.sellSymbols && asset.symbol && card.sellSymbols.includes(asset.symbol)) return true;
+  if (card.sellTypes && asset.type && card.sellTypes.includes(asset.type)) return true;
+  return false;
+}
+
+function sellAsset(state, action) {
+  requireCurrentPlayer(state, action);
+  if (!state.pendingAction || state.pendingAction.type !== 'MARKET_OFFER') throw new Error('Рыночное предложение сейчас недоступно.');
+  const financials = currentFinancials(state, action.playerId);
+  const assetId = action.payload && action.payload.assetId;
+  const assetIndex = financials.assets.findIndex((asset) => asset.assetId === assetId || asset.id === assetId);
+  if (assetIndex < 0) throw new Error('Актив не найден.');
+  const asset = financials.assets[assetIndex];
+  const card = state.pendingAction.card;
+  if (!assetMatchesMarket(asset, card)) throw new Error('Этот актив не подходит под рыночное предложение.');
+  const salePrice = card.sellPrice
+    ? card.sellPrice * (asset.shares || 1)
+    : Math.round((asset.costBasis || asset.cost || 0) * (card.multiplier || 1));
+  financials.cash += salePrice;
+  financials.passiveIncome -= asset.cashflow || 0;
+  financials.assets.splice(assetIndex, 1);
+  recalculateFinancials(financials);
+  appendLog(state, `${currentPlayer(state).name} продал «${asset.title}» за $${salePrice}.`);
   setEndTurn(state, currentPlayer(state));
   return state;
 }
@@ -270,9 +358,10 @@ function takeLoan(state, action) {
   const rounded = Math.ceil(amount / 100) * 100;
   const financials = currentFinancials(state, action.playerId);
   financials.cash += rounded;
-  financials.loans += rounded;
+  financials.loans = (financials.loans || 0) + rounded;
+  recalculateFinancials(financials);
   financials.liabilities = financials.liabilities.filter((item) => item.id !== 'bank_loan');
-  financials.liabilities.push({ id: 'bank_loan', title: 'Банковский кредит', balance: financials.loans });
+  financials.liabilities.push({ id: 'bank_loan', title: 'Банковский кредит', balance: financials.loans, payment: financials.monthlyLoanPayment });
   appendLog(state, `${currentPlayer(state).name} взял кредит $${rounded}.`);
   return state;
 }
@@ -286,9 +375,11 @@ function payDebt(state, action) {
   if (amount > financials.loans) throw new Error('Сумма больше долга.');
   financials.cash -= amount;
   financials.loans -= amount;
-  financials.liabilities = financials.loans > 0
-    ? [{ id: 'bank_loan', title: 'Банковский кредит', balance: financials.loans }]
-    : [];
+  recalculateFinancials(financials);
+  financials.liabilities = financials.liabilities.filter((item) => item.id !== 'bank_loan');
+  if (financials.loans > 0) {
+    financials.liabilities.push({ id: 'bank_loan', title: 'Банковский кредит', balance: financials.loans, payment: financials.monthlyLoanPayment });
+  }
   appendLog(state, `${currentPlayer(state).name} погасил долг на $${amount}.`);
   return state;
 }
@@ -301,9 +392,13 @@ function applyGameAction(currentState, action, options = {}) {
     case 'ROLL_DICE':
       return rollDice(state, action, options);
     case 'CHOOSE_DEAL_TYPE':
-      return chooseDealType(state, action);
+      return chooseDealType(state, action, options);
     case 'BUY_ASSET':
       return buyAsset(state, action);
+    case 'SELL_ASSET':
+      return sellAsset(state, action);
+    case 'PAY_DOODAD':
+      return payDoodad(state, action);
     case 'ACCEPT_CHARITY':
       return acceptCharity(state, action);
     case 'SKIP_ACTION':
@@ -322,7 +417,6 @@ function applyGameAction(currentState, action, options = {}) {
 module.exports = {
   BOARD,
   CELL_LABELS,
-  DEALS,
   createInitialGameState,
   applyGameAction,
 };

@@ -91,6 +91,13 @@
       render();
     });
     socket.on('invalidAction', (error) => toast(error.message || 'Действие недоступно.'));
+    socket.on('roomClosed', (payload) => {
+      applyRoomPayload(payload);
+      state.gameState = null;
+      state.screen = 'lobby';
+      toast('Комната закрыта хостом.');
+      render();
+    });
     return socket;
   }
 
@@ -172,6 +179,16 @@
     render();
   }
 
+  async function closeOnlineRoom() {
+    if (!confirm('Закрыть комнату для всех игроков?')) return;
+    const result = await emit('room:close', { roomId: state.room.id, playerId: state.player.id });
+    if (!result.ok) return toast(result.error);
+    applyRoomPayload(result);
+    state.gameState = null;
+    state.screen = 'lobby';
+    render();
+  }
+
   async function copyInvite() {
     await navigator.clipboard.writeText(inviteUrl());
     toast('Ссылка скопирована.');
@@ -221,6 +238,7 @@
     const readyCount = state.players.filter((player) => player.isReady || player.isHost).length;
     const isHost = state.player && state.room.hostPlayerId === state.player.id;
     const settings = state.room.settings || {};
+    const isClosed = state.room.status === 'closed';
     root.innerHTML = `
       <div class="topbar">
         <button class="ghost" data-action="home">←</button>
@@ -241,13 +259,15 @@
           </div>
           <div class="invite-box">
             <strong>Настройки MVP</strong><br>
+            Статус: ${isClosed ? 'закрыта' : state.room.status}<br>
             Игроков: ${state.players.length}/${state.room.maxPlayers}<br>
             Профессии: ${settings.randomJobs ? 'случайно' : 'вручную'}<br>
             Режим: ${settings.quickStart ? 'быстрый старт' : 'стандартный'}
           </div>
           <div class="actions">
-            <button data-action="ready">${state.player && state.player.isReady ? 'Я не готов' : 'Я готов'}</button>
-            <button ${isHost ? '' : 'disabled'} data-action="start">Начать игру</button>
+            <button ${isClosed ? 'disabled' : ''} data-action="ready">${state.player && state.player.isReady ? 'Я не готов' : 'Я готов'}</button>
+            <button ${isHost && !isClosed ? '' : 'disabled'} data-action="start">Начать игру</button>
+            <button class="secondary" ${isHost && !isClosed ? '' : 'disabled'} data-action="close-room">Закрыть комнату</button>
           </div>
         </div>
         <aside class="card grid">
@@ -265,7 +285,8 @@
       player.isConnected ? '' : '<span class="badge offline">offline</span>',
     ].join('');
     const fin = state.gameState && state.gameState.financials[player.id];
-    const progress = fin ? `<small>Cash $${fin.cash} · Passive $${fin.passiveIncome}</small>` : '';
+    const track = player.hasEscapedRatRace ? ' · Fast Track' : '';
+    const progress = fin ? `<small>${escapeHtml(fin.profession || player.professionTitle || '')}${track} · Cash $${fin.cash} · Passive $${fin.passiveIncome}</small>` : '';
     return `<div class="player-row"><span class="dot" style="background:${escapeHtml(player.color)}"></span><strong>${escapeHtml(player.name)}</strong><span>${badges}</span>${progress}</div>`;
   }
 
@@ -285,6 +306,7 @@
         <div><strong>Ход: ${escapeHtml(current ? current.name : '—')}</strong><br><span class="lead">Раунд ${game.turnNumber}</span></div>
         <span class="room-code">${escapeHtml(state.room.inviteCode)}</span>
         <span class="badge ${state.connection === 'online' ? 'ready' : 'offline'}">${state.connection === 'online' ? 'online' : 'offline'}</span>
+        ${state.player && state.room.hostPlayerId === state.player.id ? '<button class="ghost" data-action="close-room">Закрыть</button>' : ''}
       </div>
       <section class="card grid">
         <div class="stat-grid">
@@ -311,11 +333,26 @@
     if (state.tab === 'board') return `<div class="board-list">${game.board.map((cell) => `<span class="board-pill ${current && current.position === cell.id ? 'active' : ''}">${cell.id + 1}. ${escapeHtml(cell.label || cell.type)}</span>`).join('')}</div>`;
     if (state.tab === 'finance') {
       const fin = meFinancials;
-      return `<div class="grid"><h2>Финансы игрока</h2><p class="lead">Cash: $${fin.cash} · Payday: $${fin.payday} · Expenses: $${fin.totalExpenses}</p><div class="invite-box"><strong>Доходы</strong><br>Salary: $${fin.salary}<br>Passive: $${fin.passiveIncome}</div><div class="invite-box"><strong>Активы</strong><br>${fin.assets.map((asset) => escapeHtml(asset.title)).join('<br>') || 'Пока нет'}</div><div class="invite-box"><strong>Обязательства</strong><br>Loans: $${fin.loans}<br>Children: ${fin.children}</div></div>`;
+      return `<div class="grid">
+        <h2>Финансы игрока</h2>
+        <p class="lead">${escapeHtml(fin.profession || 'Профессия')} · Cash: $${fin.cash} · Payday: $${fin.payday} · Expenses: $${fin.totalExpenses}</p>
+        <div class="invite-box"><strong>Доходы</strong><br>Salary: $${fin.salary}<br>Passive: $${fin.passiveIncome}<br>Total: $${fin.totalIncome}</div>
+        <div class="invite-box"><strong>Активы</strong><br>${fin.assets.map((asset) => `${escapeHtml(asset.title)}${asset.shares ? ` · ${asset.shares} шт.` : ''}${asset.cashflow ? ` · +$${asset.cashflow}` : ''}`).join('<br>') || 'Пока нет'}</div>
+        <div class="invite-box"><strong>Обязательства</strong><br>${fin.liabilities.map((item) => `${escapeHtml(item.title)}: $${item.balance}${item.payment ? ` / платёж $${item.payment}` : ''}`).join('<br>') || 'Нет'}<br>Children: ${fin.children}</div>
+      </div>`;
     }
     const pending = game.pendingAction || {};
     const deal = pending.deal;
-    return `<div class="event-card"><span class="event-type">${escapeHtml(currentCell ? currentCell.label || currentCell.type : 'START')}</span><h2>${escapeHtml(current ? current.name : 'Игрок')} — ${phaseTitle(game.phase)}</h2><p class="lead">${game.dice ? `Кубик: ${game.dice}. ` : ''}${pending.amount ? `Сумма: $${pending.amount}. ` : ''}${deal ? `${escapeHtml(deal.title)} · цена $${deal.cost} · cashflow $${deal.cashflow}. ${escapeHtml(deal.description)}` : 'Следуйте основной кнопке действия. Остальные игроки видят состояние в режиме наблюдения.'}</p></div>`;
+    const card = pending.card;
+    const currentDream = current && current.dream;
+    const cardText = deal
+      ? `${escapeHtml(deal.title)} · взнос $${deal.downPayment || deal.cost} · cashflow $${deal.cashflow || 0}. ${escapeHtml(deal.description)}`
+      : card
+        ? `${escapeHtml(card.title)}${card.cost ? ` · цена $${card.cost}` : ''}${card.sellPrice ? ` · цена продажи $${card.sellPrice}` : ''}. ${escapeHtml(card.description || '')}`
+        : currentDream
+          ? `Мечта: ${escapeHtml(currentDream.title)} ($${currentDream.cost}). Следуйте основной кнопке действия.`
+          : 'Следуйте основной кнопке действия. Остальные игроки видят состояние в режиме наблюдения.';
+    return `<div class="event-card"><span class="event-type">${escapeHtml(currentCell ? currentCell.label || currentCell.type : 'START')}</span><h2>${escapeHtml(current ? current.name : 'Игрок')} — ${phaseTitle(game.phase)}</h2><p class="lead">${game.dice ? `Кубик: ${game.dice}. ` : ''}${pending.amount ? `Сумма: $${pending.amount}. ` : ''}${cardText}</p></div>`;
   }
 
   function phaseTitle(phase) {
@@ -329,12 +366,32 @@
     }[phase] || phase;
   }
 
+  function matchingMarketAssets(game) {
+    const pending = game.pendingAction || {};
+    const card = pending.card || {};
+    const fin = state.player && game.financials[state.player.id];
+    if (!fin) return [];
+    return fin.assets.filter((asset) => {
+      if (card.sellSymbols && asset.symbol && card.sellSymbols.includes(asset.symbol)) return true;
+      if (card.sellTypes && asset.type && card.sellTypes.includes(asset.type)) return true;
+      return false;
+    });
+  }
+
+  function renderMarketActions(game) {
+    const assets = matchingMarketAssets(game);
+    const sellButtons = assets.map((asset) => `<button data-action="sell-asset" data-asset-id="${escapeHtml(asset.assetId || asset.id)}">Продать: ${escapeHtml(asset.title)}</button>`).join('');
+    return `<div class="actions">${sellButtons || '<button disabled>Нет подходящих активов</button>'}<button class="secondary" data-action="skip">Пропустить</button></div>`;
+  }
+
   function renderPrimaryAction(game) {
     const { meActive } = currentContext(game);
     if (!meActive) return '<button class="primary-action" disabled>Сейчас ход другого игрока</button>';
     if (game.phase === 'waitingForRoll') return '<button class="primary-action" data-action="roll">Бросить кубик</button>';
     if (game.phase === 'choosingDealType') return '<div class="actions"><button data-action="deal-small">Малая сделка</button><button data-action="deal-big">Крупная сделка</button><button class="secondary" data-action="skip">Пропустить</button></div>';
     if (game.pendingAction && game.pendingAction.type === 'ACCEPT_CHARITY') return '<div class="actions"><button data-action="charity">Пожертвовать</button><button class="secondary" data-action="skip">Пропустить</button></div>';
+    if (game.pendingAction && game.pendingAction.type === 'PAY_DOODAD') return '<div class="actions"><button data-action="pay-doodad">Оплатить расход</button><button class="secondary" data-action="loan">Взять кредит</button></div>';
+    if (game.pendingAction && game.pendingAction.type === 'MARKET_OFFER') return renderMarketActions(game);
     if (game.phase === 'reviewingDeal') return '<div class="actions"><button data-action="buy">Купить актив</button><button class="secondary" data-action="loan">Взять кредит</button><button class="secondary" data-action="skip">Пропустить</button></div>';
     if (game.phase === 'resolvingCell') return '<button class="primary-action" data-action="skip">Продолжить</button>';
     if (game.phase === 'endTurn') return '<div class="actions"><button class="primary-action" data-action="end-turn">Завершить ход</button><button class="secondary" data-action="loan">Кредит</button><button class="secondary" data-action="paydebt">Погасить долг</button></div>';
@@ -365,10 +422,13 @@
     if (action === 'share') shareInvite();
     if (action === 'ready') toggleReady();
     if (action === 'start') startGame();
+    if (action === 'close-room') closeOnlineRoom();
     if (action === 'roll') gameAction('ROLL_DICE');
     if (action === 'deal-small') gameAction('CHOOSE_DEAL_TYPE', { dealType: 'small' });
     if (action === 'deal-big') gameAction('CHOOSE_DEAL_TYPE', { dealType: 'big' });
     if (action === 'buy') gameAction('BUY_ASSET');
+    if (action === 'pay-doodad') gameAction('PAY_DOODAD');
+    if (action === 'sell-asset') gameAction('SELL_ASSET', { assetId: event.target.closest('[data-asset-id]').dataset.assetId });
     if (action === 'charity') gameAction('ACCEPT_CHARITY');
     if (action === 'skip') gameAction('SKIP_ACTION');
     if (action === 'loan') {

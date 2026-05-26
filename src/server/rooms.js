@@ -123,6 +123,7 @@ function joinRoom(store, invite, input = {}) {
     return { ...snapshot(room), player: { ...existing } };
   }
 
+  if (room.status === 'closed') throw new Error('Комната закрыта.');
   if (room.status !== 'lobby') throw new Error('Игра уже началась.');
   if (room.players.length >= room.maxPlayers) throw new Error('Комната заполнена.');
 
@@ -188,6 +189,15 @@ function markDisconnected(store, roomId, playerId) {
   return snapshot(room);
 }
 
+function closeRoom(store, roomId, playerId) {
+  const room = store.rooms.get(roomId);
+  if (!room) throw new Error('Комната не найдена.');
+  if (room.hostPlayerId !== playerId) throw new Error('Только хост может закрыть комнату.');
+  room.status = 'closed';
+  room.updatedAt = new Date().toISOString();
+  return snapshot(room);
+}
+
 module.exports = {
   createRoomStore,
   createRoom,
@@ -196,6 +206,7 @@ module.exports = {
   rejoinRoom,
   setReady,
   startRoomGame,
+  closeRoom,
   markDisconnected,
   snapshot,
   COLORS,

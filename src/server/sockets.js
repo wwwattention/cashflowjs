@@ -7,6 +7,7 @@ const {
   rejoinRoom,
   setReady,
   startRoomGame,
+  closeRoom,
   markDisconnected,
   findRoomByInvite,
 } = require('./rooms');
@@ -77,6 +78,19 @@ function installSockets(httpServer, store) {
         persist(store);
         reply({ ok: true, ...snapshot });
         emitLobby(io, snapshot);
+      } catch (error) {
+        reply({ ok: false, error: error.message });
+      }
+    });
+
+    socket.on('room:close', (payload = {}, reply = () => {}) => {
+      try {
+        const snapshot = closeRoom(store, payload.roomId, payload.playerId || socket.data.playerId);
+        store.gameStates.delete(snapshot.room.id);
+        persist(store);
+        reply({ ok: true, ...snapshot });
+        emitLobby(io, snapshot);
+        io.to(snapshot.room.id).emit('roomClosed', snapshot);
       } catch (error) {
         reply({ ok: false, error: error.message });
       }
