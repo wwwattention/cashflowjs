@@ -1,0 +1,7 @@
+services:
+  cashflowjs:
+    build: .
+    container_name: cashflowjs-ru
+    ports:
+      - "127.0.0.1:12929:80"
+    restart: unless-stopped
