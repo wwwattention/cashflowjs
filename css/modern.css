@@ -759,3 +759,429 @@ td {
         font-size: 16px !important;
     }
 }
+
+
+
+/* Keep game-only cards out of the landing/setup screens. */
+body:not(.cf-board-active) #info,
+body:not(.cf-board-active) #turn-info,
+body:not(.cf-board-active) #turn-info-box,
+body:not(.cf-board-active) #game-menu,
+body:not(.cf-board-active) #finance-box,
+body:not(.cf-board-active) #player-list {
+    display: none !important;
+}
+
+/* Board usability pass: contrast, legibility, action clarity */
+#game-container {
+    margin-top: 12px !important;
+}
+
+#cf-board-hint {
+    display: none;
+    width: min(1180px, 100%);
+    margin: 0 auto 12px;
+    padding: 12px 16px;
+    border: 1px solid rgba(109, 124, 255, 0.22);
+    border-radius: 14px;
+    color: var(--cf-text-2);
+    background: linear-gradient(135deg, rgba(109, 124, 255, 0.14), rgba(15, 18, 26, 0.88));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 12px 30px rgba(0,0,0,0.22);
+    font-size: 0.94rem;
+    line-height: 1.45;
+}
+
+.cf-board-active #cf-board-hint {
+    display: block;
+}
+
+#board2 {
+    min-width: 1240px;
+    padding: 10px;
+    background:
+        radial-gradient(circle at 50% 48%, rgba(109,124,255,0.12), transparent 34%),
+        rgba(4, 8, 14, 0.92) !important;
+}
+
+#board {
+    min-width: 980px;
+}
+
+.cell,
+.cell2,
+.cell2-left,
+.cell2-right,
+.cell2-top,
+.cell2-bottom {
+    overflow: hidden;
+    cursor: help;
+    border-width: 2px !important;
+    border-color: rgba(255, 255, 255, 0.82) !important;
+    color: #fff !important;
+    font-weight: 750 !important;
+    line-height: 1.16 !important;
+    letter-spacing: -0.01em !important;
+}
+
+.cell {
+    height: 104px !important;
+    min-width: 104px;
+    padding: 8px 6px !important;
+    font-size: 0.72rem !important;
+}
+
+.cell2,
+.cell2-top,
+.cell2-bottom {
+    min-height: 86px;
+    padding: 8px 6px !important;
+    font-size: 0.74rem !important;
+}
+
+.cell2-left,
+.cell2-right {
+    height: 104px !important;
+    padding: 8px 6px !important;
+    font-size: 0.74rem !important;
+}
+
+.cellx,
+.cellx2 {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 30px;
+    left: 0;
+    bottom: 0;
+    padding: 7px 6px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 0 7px 7px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.42));
+    color: #fff !important;
+    font-size: 0.82rem !important;
+    font-weight: 850 !important;
+    text-transform: uppercase;
+}
+
+.cellx p,
+.cellx2 p {
+    margin: 0 !important;
+}
+
+.pay-space,
+.pay-space .cellx,
+.pay-space .cellx2 {
+    color: #0f172a !important;
+    text-shadow: none !important;
+}
+
+.pay-space .cellx,
+.pay-space .cellx2 {
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.48));
+}
+
+.cha-space,
+.lia-space,
+.kid-space,
+.dow-space,
+.off-space,
+.opp-space,
+.opp-space2 {
+    filter: saturate(1.06) contrast(1.08);
+}
+
+.player-piece {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    border: 3px solid rgba(255,255,255,0.94) !important;
+    box-shadow: 0 0 0 4px rgba(109,124,255,0.30), 0 10px 22px rgba(0,0,0,0.35) !important;
+    z-index: 30 !important;
+    font-size: 0.85rem !important;
+    font-weight: 900 !important;
+}
+
+#turn-info {
+    width: min(520px, 94vw) !important;
+    min-height: 430px;
+    max-height: min(78vh, 720px);
+    padding: 18px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-radius: 22px !important;
+    border: 1px solid rgba(255,255,255,0.20) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(241,245,249,0.96)) !important;
+    box-shadow: 0 28px 90px rgba(0,0,0,0.38), 0 0 0 9999px rgba(0,0,0,0.18) !important;
+}
+
+#turn-info h1,
+#turn-info h2,
+#turn-info h3 {
+    margin-top: 0 !important;
+    color: #0f172a !important;
+    line-height: 1.15 !important;
+}
+
+#dream-choice-btn,
+#roll-btn,
+#roll2-btn,
+#ft-roll-btn,
+#ft-roll2-btn,
+#done-btn,
+#end-turn-btn,
+#ft-end-turn-btn,
+#small-deal-btn,
+#big-deal-btn,
+#pass-btn,
+#buy-stock-btn,
+#buy-real-estate-btn,
+#buy-business-btn,
+#buy-coin-btn,
+#show-stock-form-btn,
+#show-stock-sell-form-btn,
+#charity-donate-btn {
+    min-width: 138px;
+    min-height: 46px;
+    margin: 8px 6px !important;
+    padding: 11px 16px !important;
+    background: linear-gradient(135deg, var(--cf-accent), var(--cf-accent-2)) !important;
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.18) !important;
+    font-size: 0.98rem !important;
+}
+
+#dream-choice-btn {
+    display: block !important;
+    margin: 16px auto 8px !important;
+}
+
+#game-menu {
+    position: sticky;
+    bottom: 10px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+#game-menu::before {
+    content: "Управление";
+    flex: 0 0 auto;
+    color: var(--cf-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+#cf-cell-preview {
+    position: absolute;
+    z-index: 10000;
+    width: min(320px, calc(100vw - 24px));
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+    transition: opacity 120ms ease, transform 120ms ease;
+    padding: 13px 15px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.18);
+    color: var(--cf-text);
+    background: rgba(15, 18, 26, 0.96);
+    box-shadow: 0 18px 54px rgba(0,0,0,0.44), inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(16px);
+    font-size: 0.94rem;
+    line-height: 1.42;
+}
+
+#cf-cell-preview.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Onboarding */
+#cf-help-button {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9998;
+    min-height: 42px;
+    padding: 10px 14px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, rgba(109,124,255,0.95), rgba(139,92,246,0.92)) !important;
+    color: #fff !important;
+    box-shadow: 0 14px 34px rgba(109,124,255,0.30) !important;
+}
+
+#cf-onboarding {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+#cf-onboarding.is-visible {
+    display: flex;
+}
+
+.cf-onboarding-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.58);
+    backdrop-filter: blur(4px);
+}
+
+.cf-onboarding-card {
+    position: relative;
+    width: min(460px, 100%);
+    padding: clamp(20px, 4vw, 30px);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 24px;
+    color: var(--cf-text);
+    background:
+        radial-gradient(circle at top right, rgba(109,124,255,0.22), transparent 42%),
+        rgba(15,18,26,0.96);
+    box-shadow: 0 30px 90px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.075);
+}
+
+.cf-onboarding-kicker {
+    display: inline-flex;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    color: #dfe4ff;
+    background: rgba(109,124,255,0.18);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.cf-onboarding-card h2 {
+    margin: 0 0 10px;
+    font-size: clamp(1.45rem, 4vw, 2rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+}
+
+.cf-onboarding-card p {
+    margin: 0;
+    color: var(--cf-text-2);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+.cf-onboarding-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.cf-onboarding-skip,
+.cf-onboarding-next {
+    width: auto !important;
+    padding: 10px 14px !important;
+}
+
+.cf-onboarding-next {
+    background: linear-gradient(135deg, var(--cf-accent), var(--cf-accent-2)) !important;
+}
+
+.cf-onboarding-target {
+    outline: 3px solid rgba(109,124,255,0.75) !important;
+    outline-offset: 6px;
+    box-shadow: 0 0 0 12px rgba(109,124,255,0.16), var(--cf-shadow) !important;
+}
+
+@media (max-width: 840px) {
+    #board2 {
+        min-width: 1180px;
+    }
+    #turn-info {
+        width: min(480px, 92vw) !important;
+        max-height: 72vh;
+    }
+    #cf-help-button {
+        right: 12px;
+        bottom: 12px;
+    }
+}
+
+@media (max-width: 520px) {
+    #cf-board-hint {
+        font-size: 0.86rem;
+        padding: 10px 12px;
+    }
+    #cf-onboarding {
+        align-items: flex-end;
+        padding: 10px;
+    }
+    .cf-onboarding-card {
+        border-radius: 20px;
+    }
+    .cf-onboarding-actions {
+        flex-direction: column-reverse;
+    }
+    .cf-onboarding-actions button {
+        width: 100% !important;
+    }
+}
+
+/* Board onboarding should teach without hiding the center card. */
+.cf-board-active #cf-onboarding {
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 22px;
+    pointer-events: none;
+}
+
+.cf-board-active #cf-onboarding .cf-onboarding-scrim {
+    background: rgba(0,0,0,0.08);
+    backdrop-filter: none;
+    pointer-events: none;
+}
+
+.cf-board-active #cf-onboarding .cf-onboarding-card {
+    width: min(390px, calc(100vw - 44px));
+    pointer-events: auto;
+}
+
+#game-container {
+    position: relative;
+}
+
+.cf-board-active #game-container::after {
+    content: "→";
+    position: sticky;
+    right: 10px;
+    float: right;
+    bottom: 12px;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-top: -46px;
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(109,124,255,0.92), rgba(139,92,246,0.88));
+    box-shadow: 0 12px 26px rgba(0,0,0,0.34);
+    font-weight: 900;
+}
+
+@media (max-width: 620px) {
+    .cf-board-active #cf-onboarding {
+        align-items: flex-end;
+        justify-content: center;
+        padding: 10px;
+    }
+    .cf-board-active #cf-onboarding .cf-onboarding-card {
+        width: 100%;
+    }
+}
