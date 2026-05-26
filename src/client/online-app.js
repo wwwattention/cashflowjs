@@ -103,9 +103,14 @@
     render();
   }
 
-  async function joinOnlineRoom(event) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
+  async function joinOnlineRoom(formOrEvent) {
+    if (formOrEvent && typeof formOrEvent.preventDefault === 'function') {
+      formOrEvent.preventDefault();
+    }
+    const formElement = formOrEvent && formOrEvent.currentTarget
+      ? formOrEvent.currentTarget
+      : formOrEvent;
+    const form = new FormData(formElement);
     const result = await emit('room:join', {
       inviteCode: roomCodeFromUrl(),
       sessionId: sessionId(),
@@ -194,7 +199,7 @@
           <p class="lead">Комната: <span class="room-code">${code}</span></p>
           <label>Ваше имя <input name="name" maxlength="32" required placeholder="Например, Roman"></label>
           <label>Цвет <select name="color">${colors.map((color) => `<option value="${color}">${color}</option>`).join('')}</select></label>
-          <button type="submit">Присоединиться</button>
+          <button type="button" data-action="join-room">Присоединиться</button>
         </form>
       </section>`;
   }
@@ -304,6 +309,7 @@
     if (tab) { state.tab = tab; render(); return; }
     if (!action) return;
     if (action === 'create-online') createOnlineRoom();
+    if (action === 'join-room') joinOnlineRoom(event.target.closest('form'));
     if (action === 'local-game') location.href = '/index.html';
     if (action === 'home') { state.screen = 'home'; history.replaceState(null, '', '/online.html'); render(); }
     if (action === 'copy') copyInvite();
@@ -315,6 +321,7 @@
   });
 
   root.addEventListener('submit', (event) => {
+    event.preventDefault();
     if (event.target.matches('[data-form="join"]')) joinOnlineRoom(event);
   });
 
