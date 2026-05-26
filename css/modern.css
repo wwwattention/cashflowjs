@@ -1,0 +1,761 @@
+/*
+ * Modern UI layer for CashFlowJs.
+ * Pure presentation overrides only: no gameplay logic, ids, event handlers, or data flow changed.
+ */
+
+:root {
+    --cf-bg: #08090a;
+    --cf-bg-2: #0d1117;
+    --cf-panel: rgba(15, 18, 26, 0.86);
+    --cf-panel-strong: rgba(20, 24, 35, 0.94);
+    --cf-surface: rgba(255, 255, 255, 0.055);
+    --cf-surface-2: rgba(255, 255, 255, 0.085);
+    --cf-border: rgba(255, 255, 255, 0.12);
+    --cf-border-soft: rgba(255, 255, 255, 0.075);
+    --cf-text: #f7f8f8;
+    --cf-text-2: #d0d6e0;
+    --cf-muted: #8a8f98;
+    --cf-accent: #6d7cff;
+    --cf-accent-2: #8b5cf6;
+    --cf-green: #16a34a;
+    --cf-yellow: #fbbf24;
+    --cf-red: #ef4444;
+    --cf-blue: #0ea5e9;
+    --cf-radius: 18px;
+    --cf-radius-sm: 10px;
+    --cf-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    --cf-font: "Inter", "Montserrat", "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --cf-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-height: 100%;
+    background: var(--cf-bg);
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 100vh;
+    height: auto !important;
+    margin: 0 !important;
+    overflow-x: hidden;
+    color: var(--cf-text);
+    font-family: var(--cf-font);
+    background:
+        radial-gradient(circle at 12% 8%, rgba(109, 124, 255, 0.28), transparent 30rem),
+        radial-gradient(circle at 88% 12%, rgba(34, 197, 94, 0.16), transparent 24rem),
+        radial-gradient(circle at 50% 105%, rgba(139, 92, 246, 0.18), transparent 32rem),
+        linear-gradient(135deg, #06070a 0%, #0d1117 52%, #08090a 100%);
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.38;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+#window {
+    display: block !important;
+    width: 100%;
+    min-height: 100vh;
+    margin: 0 auto !important;
+    padding: clamp(14px, 2.2vw, 28px) !important;
+    font-family: var(--cf-font) !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+}
+
+/* Landing / mode selection */
+#home-screen,
+#game-selection-screen {
+    min-height: calc(100vh - 56px);
+    width: min(1120px, 100%);
+    margin: 0 auto !important;
+    padding: clamp(36px, 8vw, 96px) clamp(18px, 4vw, 56px) !important;
+    border: 1px solid var(--cf-border-soft);
+    border-radius: clamp(22px, 4vw, 36px);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.035)),
+        rgba(7, 10, 17, 0.72);
+    box-shadow: var(--cf-shadow);
+    backdrop-filter: blur(18px);
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+}
+
+#home-screen::after,
+#game-selection-screen::after {
+    content: "";
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    right: -130px;
+    bottom: -170px;
+    background: radial-gradient(circle, rgba(109, 124, 255, 0.35), transparent 67%);
+    pointer-events: none;
+}
+
+#home-title {
+    margin: clamp(32px, 8vh, 80px) auto 0 !important;
+    color: var(--cf-text) !important;
+    font-family: var(--cf-font) !important;
+    font-size: clamp(3.2rem, 12vw, 8.8rem) !important;
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: -0.075em !important;
+    text-shadow: none !important;
+}
+
+#home-title::after {
+    content: "Финансовая стратегия";
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: clamp(18px, 3vw, 28px) auto 0;
+    padding: 8px 14px;
+    border: 1px solid rgba(109, 124, 255, 0.30);
+    border-radius: 999px;
+    color: #dfe4ff;
+    background: rgba(109, 124, 255, 0.13);
+    font-size: clamp(0.78rem, 2vw, 0.98rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+#click-to-start {
+    display: inline-flex;
+    font-family: var(--cf-font) !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 54px;
+    margin: clamp(46px, 9vh, 96px) auto 0 !important;
+    padding: 0 24px !important;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    color: var(--cf-text) !important;
+    background: linear-gradient(135deg, rgba(109, 124, 255, 0.95), rgba(139, 92, 246, 0.88));
+    box-shadow: 0 14px 34px rgba(109, 124, 255, 0.28);
+    font-size: clamp(1rem, 3vw, 1.35rem) !important;
+    font-weight: 700;
+    text-shadow: none !important;
+    animation: none !important;
+    cursor: pointer;
+}
+
+#version {
+    position: absolute;
+    right: 22px;
+    bottom: 18px;
+    float: none !important;
+    color: var(--cf-muted) !important;
+    font-family: var(--cf-mono);
+    font-size: 0.82rem !important;
+}
+
+#new-room-button,
+#start-game,
+#continue-game,
+#default-game-indicator,
+#delete-save,
+#dream-choice-btn,
+#roll-btn,
+#roll2-btn,
+#ft-roll-btn,
+#ft-roll2-btn,
+#end-turn-btn,
+#ft-end-turn-btn,
+#done-btn,
+#pass-btn,
+#pass-button,
+#buy-opp-button,
+#buy-real-estate-btn,
+#buy-stock-btn,
+#sell-stock-btn,
+#doodad-pay-button,
+#ds-pay-button,
+#pd-pay-button,
+#charity-donate-btn,
+#confirm-pay-btn,
+#confirm-settlement-btn,
+#ft-enter-btn,
+#ftic-ok-btn,
+.menu-btn,
+button,
+input[type="button"] {
+    min-height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 12px !important;
+    color: var(--cf-text) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045)) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 22px rgba(0, 0, 0, 0.22) !important;
+    font-family: var(--cf-font) !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+button:hover,
+input[type="button"]:hover,
+.menu-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(109, 124, 255, 0.55) !important;
+    background: linear-gradient(180deg, rgba(109, 124, 255, 0.35), rgba(139, 92, 246, 0.20)) !important;
+}
+
+#new-room-button,
+#start-game {
+    width: min(440px, 100%) !important;
+    height: auto !important;
+    min-height: 64px;
+    margin: clamp(36px, 8vh, 80px) auto 0 !important;
+    padding: 16px 24px !important;
+    font-size: clamp(1.1rem, 4vw, 1.85rem) !important;
+    color: white !important;
+    background: linear-gradient(135deg, var(--cf-accent), var(--cf-accent-2)) !important;
+}
+
+/* Setup screen */
+#setup-screen {
+    width: 100% !important;
+    min-height: calc(100vh - 56px);
+    color: var(--cf-text) !important;
+}
+
+#setup-container {
+    width: min(1180px, 100%) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    padding: clamp(10px, 2vw, 24px) 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(310px, 0.88fr) minmax(320px, 1.12fr);
+    gap: clamp(16px, 2.4vw, 28px);
+    align-items: start !important;
+}
+
+#player-setup-container,
+#options-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    border: 1px solid var(--cf-border-soft) !important;
+    border-radius: var(--cf-radius) !important;
+    color: var(--cf-text) !important;
+    background: var(--cf-panel) !important;
+    box-shadow: var(--cf-shadow) !important;
+    backdrop-filter: blur(16px);
+}
+
+#player-setup-container {
+    padding: clamp(16px, 2.4vw, 28px) !important;
+}
+
+#options-container {
+    padding: clamp(16px, 2.4vw, 28px) !important;
+    display: grid;
+    gap: 18px;
+}
+
+#player-number-option {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: var(--cf-text-2);
+    font-weight: 700;
+}
+
+#player-setup-input-container {
+    width: 100%;
+    display: grid;
+    gap: 12px;
+}
+
+.player-input {
+    width: 100%;
+    margin: 0 !important;
+    padding: 12px !important;
+    border: 1px solid var(--cf-border-soft);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.045);
+    display: grid !important;
+    grid-template-columns: auto minmax(126px, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    color: var(--cf-text-2);
+    font-family: var(--cf-font) !important;
+    font-size: 0.98rem !important;
+    text-shadow: none !important;
+}
+
+.player-option-dropdowns {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
+    gap: 10px;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+.job-input,
+.color-input,
+#manual-dice-input,
+#repay-loan-input,
+#share-amt-input,
+#share-amt-input-sell,
+#shares-input {
+    min-height: 40px;
+    max-width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    border-radius: 11px !important;
+    color: var(--cf-text) !important;
+    background: rgba(8, 9, 10, 0.72) !important;
+    outline: none;
+    padding: 8px 10px !important;
+    font-family: var(--cf-font) !important;
+    font-size: 0.9rem !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.job-input {
+    font-size: 0.86rem !important;
+}
+
+select option {
+    color: #111827;
+    background: #f8fafc;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: rgba(109, 124, 255, 0.75) !important;
+    box-shadow: 0 0 0 3px rgba(109, 124, 255, 0.18);
+}
+
+.player-options-checkbox,
+.options-checkbox {
+    color: var(--cf-text-2) !important;
+    font-family: var(--cf-font) !important;
+    text-shadow: none !important;
+}
+
+.player-input-checkmark,
+.checkmark {
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.player-input-checkmark {
+    color: var(--cf-text-2) !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    white-space: nowrap;
+}
+
+.checkmark {
+    top: 50% !important;
+    left: 10px !important;
+    transform: translateY(-50%);
+    width: 24px !important;
+    height: 24px !important;
+}
+
+.player-options-checkbox input:checked ~ .player-input-checkmark,
+.options-checkbox input:checked ~ .checkmark {
+    background: linear-gradient(135deg, var(--cf-accent), var(--cf-accent-2)) !important;
+}
+
+#mode-indicator-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#default-game-indicator,
+#custom-game-indicator {
+    margin: 0 !important;
+    padding: 10px 14px !important;
+    width: auto !important;
+    min-height: 38px;
+    border-radius: 999px !important;
+    color: var(--cf-text-2) !important;
+    background: rgba(255,255,255,0.06) !important;
+}
+
+#asset-deck-selection,
+#other-options,
+#options-2 {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    border: 1px solid var(--cf-border-soft);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.038) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+}
+
+#asset-deck-selection h1,
+#other-options h1,
+#options-2 h2 {
+    margin: 0 0 14px !important;
+    color: var(--cf-text) !important;
+    font-family: var(--cf-font) !important;
+    font-size: clamp(1.05rem, 2.3vw, 1.35rem) !important;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    text-shadow: none !important;
+}
+
+#asset-deck-selection,
+#other-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+}
+
+#asset-deck-selection h1,
+#asset-deck-selection #re-options,
+#other-options h1 {
+    grid-column: 1 / -1;
+}
+
+.options-checkbox:has(#oo-) {
+    display: none !important;
+}
+
+#re-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 14px;
+}
+
+.options-checkbox {
+    width: 100%;
+    min-height: 36px;
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    margin: 0 !important;
+    padding: 9px 10px 9px 44px !important;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.035);
+    font-size: 0.92rem !important;
+    line-height: 1.25;
+    overflow: hidden;
+}
+
+.sso-slider,
+input[type="range"] {
+    width: 100%;
+    accent-color: var(--cf-accent);
+}
+
+/* Game layout */
+#game-container {
+    width: min(1180px, 100%) !important;
+    max-width: 100%;
+    margin: 0 auto !important;
+    padding: 0 0 16px;
+    display: block !important;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: rgba(109, 124, 255, 0.72) rgba(255,255,255,0.08);
+}
+
+#game-container::before {
+    content: "Игровое поле можно прокручивать по горизонтали на маленьком экране";
+    display: none;
+    margin: 0 0 10px;
+    color: var(--cf-muted);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+#board-container,
+#board,
+#board2 {
+    font-family: var(--cf-font) !important;
+}
+
+#board2 {
+    min-width: 1085px;
+    border: 1px solid var(--cf-border-soft) !important;
+    border-radius: 20px !important;
+    background: rgba(255,255,255,0.04);
+    box-shadow: var(--cf-shadow);
+    overflow: hidden;
+}
+
+#board {
+    border: 1px solid var(--cf-border-soft) !important;
+    border-radius: 16px !important;
+    background: rgba(7,10,17,0.78);
+}
+
+.cell,
+.cell2,
+.cell2-left,
+.cell2-right,
+.cell2-top,
+.cell2-bottom,
+.cell2-center {
+    border-color: rgba(255, 255, 255, 0.72) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 8px 20px rgba(0,0,0,0.18) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.50) !important;
+    font-family: var(--cf-font) !important;
+}
+
+.cell,
+.cell2-left,
+.cell2-right {
+    font-size: 0.76rem !important;
+    line-height: 1.15;
+}
+
+.cellx,
+.cellx2,
+.fast-track-space-title,
+.fast-track-cell-info {
+    font-family: var(--cf-font) !important;
+    letter-spacing: 0.01em !important;
+}
+
+.opp-space,
+.opp-space2 {
+    background: linear-gradient(135deg, #128141, #075326) !important;
+}
+
+.lia-space {
+    background: linear-gradient(135deg, #64748b, #334155) !important;
+}
+
+.cha-space {
+    background: linear-gradient(135deg, #0891b2, #155e75) !important;
+}
+
+.pay-space {
+    color: #111827 !important;
+    background: linear-gradient(135deg, #fde047, #f59e0b) !important;
+    text-shadow: none !important;
+}
+
+.off-space {
+    background: linear-gradient(135deg, #2563eb, #1e3a8a) !important;
+}
+
+.kid-space {
+    background: linear-gradient(135deg, #fb923c, #c2410c) !important;
+}
+
+.dow-space {
+    background: linear-gradient(135deg, #ef4444, #991b1b) !important;
+}
+
+.cell2-center {
+    color: #111827 !important;
+    background: rgba(255,255,255,0.92) !important;
+}
+
+#info,
+#turn-info,
+#finance-box,
+#player-list {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 16px !important;
+    background: rgba(255,255,255,0.96) !important;
+    box-shadow: 0 16px 42px rgba(15, 23, 42, 0.18) !important;
+    color: #111827 !important;
+    font-family: var(--cf-font) !important;
+}
+
+#turn-info {
+    overflow: auto;
+}
+
+#turn-info h2,
+#turn-info h3,
+.card-title,
+.card-title h2 {
+    color: #111827 !important;
+    font-family: var(--cf-font) !important;
+    letter-spacing: -0.025em;
+    text-shadow: none !important;
+}
+
+#turn-info p,
+#turn-info div,
+#finance-box,
+#finance-box td,
+#finance-box th {
+    font-family: var(--cf-font) !important;
+}
+
+.table-row-player {
+    min-height: 34px;
+    margin-bottom: 6px;
+    color: #111827 !important;
+    background: rgba(255,255,255,0.88) !important;
+    border: 1px solid rgba(15,23,42,0.08) !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+}
+
+#game-menu {
+    width: min(1085px, 100%);
+    margin: 0 auto 12px;
+    padding: 10px;
+    border: 1px solid var(--cf-border-soft);
+    border-radius: 16px !important;
+    background: var(--cf-panel);
+    box-shadow: var(--cf-shadow);
+    color: var(--cf-text-2) !important;
+    backdrop-filter: blur(16px);
+}
+
+.menu-btn,
+#roll-info-container {
+    width: auto !important;
+    min-width: 66px;
+    margin: 4px !important;
+    padding: 8px 10px !important;
+    font-size: 0.82rem !important;
+}
+
+#roll-info-container {
+    color: var(--cf-text) !important;
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid var(--cf-border-soft);
+}
+
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+th,
+td {
+    line-height: 1.25;
+}
+
+/* Mobile and narrow tablets */
+@media (max-width: 840px) {
+    #window {
+        padding: 10px !important;
+    }
+
+    #setup-container {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    #home-screen,
+    #game-selection-screen {
+        min-height: calc(100vh - 20px);
+        border-radius: 22px;
+    }
+
+    #asset-deck-selection,
+    #other-options,
+    #re-options {
+        grid-template-columns: 1fr;
+    }
+
+    .player-input {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .player-input .player-options-checkbox {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .player-option-dropdowns {
+        grid-template-columns: 1fr;
+    }
+
+    #game-container {
+        width: 100% !important;
+        padding-bottom: 18px;
+    }
+
+    #game-container::before {
+        display: block;
+    }
+
+    #game-menu {
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 520px) {
+    #home-title {
+        font-size: clamp(2.65rem, 15vw, 4.8rem) !important;
+        letter-spacing: -0.065em !important;
+    }
+
+    #home-title::after {
+        white-space: normal;
+        width: auto;
+    }
+
+    #new-room-button,
+    #start-game {
+        min-height: 58px;
+        font-size: 1.08rem !important;
+    }
+
+    #player-setup-container,
+    #options-container,
+    #asset-deck-selection,
+    #other-options,
+    #options-2 {
+        border-radius: 14px !important;
+        padding: 14px !important;
+    }
+
+    .player-input {
+        padding: 10px !important;
+        gap: 8px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    .job-input,
+    .color-input {
+        width: 100% !important;
+        font-size: 16px !important;
+    }
+}
