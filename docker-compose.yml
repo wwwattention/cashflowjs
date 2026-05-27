@@ -9,3 +9,14 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+
+  cashflow-cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cashflow-cloudflared
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared/cashflow-perfect-surf.yml:/etc/cloudflared/config.yml:ro
+      - /Users/coup/.cloudflared/1662d16f-5d43-4a46-969f-240acbeafcf0.json:/etc/cloudflared/1662d16f-5d43-4a46-969f-240acbeafcf0.json:ro
+    depends_on:
+      - cashflowjs

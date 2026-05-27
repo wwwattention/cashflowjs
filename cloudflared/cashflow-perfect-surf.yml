@@ -4,7 +4,7 @@
 # Credentials are kept outside git at ~/.cloudflared/1662d16f-5d43-4a46-969f-240acbeafcf0.json
 
 tunnel: 1662d16f-5d43-4a46-969f-240acbeafcf0
-credentials-file: /Users/coup/.cloudflared/1662d16f-5d43-4a46-969f-240acbeafcf0.json
+credentials-file: /etc/cloudflared/1662d16f-5d43-4a46-969f-240acbeafcf0.json
 
 protocol: http2
 edge-ip-version: "4"
@@ -14,7 +14,7 @@ grace-period: 30s
 
 ingress:
   - hostname: cashflow.perfect.surf
-    service: http://127.0.0.1:12929
+    service: http://host.docker.internal:12929
     originRequest:
       httpHostHeader: cashflow.perfect.surf
       connectTimeout: 30s
